@@ -1,0 +1,64 @@
+function [S_ana, c2_ana] = Solvemeth(r_a2, s_inf, r_d2, k_rat, phi, delta, c_tot)
+    % Initialisation des vecteurs S et c2
+    n = length(c_tot); % Supposons que c_tot soit un vecteur de la même taille que S et c2
+    S_ana = zeros(size(c_tot));
+    c2_ana = zeros(size(c_tot));
+
+    % Résolution pour chaque élément
+    for i = 1:n
+        % Valeurs initiales pour S_i et c2_i
+        x0 = [0.1; 0.1]; % [S_i; c2_i]
+
+        % Résolution du système d'équations pour l'élément i
+        [solution, ~] = newtonRaphson(@(x) equations(x, r_a2, s_inf, r_d2, k_rat, phi, delta, c_tot(i)), ...
+                                      @(x) jacobian(x, r_a2, s_inf, r_d2, delta), ...
+                                      x0, 1e-6, 100);
+
+        S_ana(i) = solution(1);
+        c2_ana(i) = solution(2);
+    end
+end
+
+function F = equations(x, r_a2, s_inf, r_d2, k_rat, phi, delta, c_tot_i)
+    S_i = x(1);
+    c2_i = x(2);
+
+    % Équations pour l'élément i
+    F = [
+        S_i - (r_a2 * s_inf * c2_i) / (r_d2 + r_a2 * c2_i);
+        c2_i * (k_rat * phi + (1 - phi)) + S_i * delta - c_tot_i;
+    ];
+end
+
+function J = jacobian(x, r_a2, s_inf, r_d2, delta)
+    S_i = x(1);
+    c2_i = x(2);
+
+    % Jacobien pour l'élément i
+    J = [
+        1, - (r_a2 * s_inf * r_d2) / (r_d2 + r_a2 * c2_i)^2;
+        delta, (Keq * phi + (1 - phi));
+    ];
+end
+
+function [x, iterations] = newtonRaphson(F, J, x0, tol, maxIter)
+    % Implémentation de la méthode de Newton-Raphson
+    x = x0;
+    for iterations = 1:maxIter
+        Fx = F(x);
+        Jx = J(x);
+
+        % Vérification du conditionnement de la matrice jacobienne
+        if rcond(Jx) < eps
+            warning('Matrix is singular or nearly singular. Applying regularization.');
+            Jx = Jx + 1e-6 * eye(size(Jx));
+        end
+
+        delta = Jx \ -Fx;
+        x = x + delta;
+
+        if norm(delta) < tol
+            break;
+        end
+    end
+end

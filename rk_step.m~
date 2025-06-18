@@ -1,0 +1,114 @@
+function [ k_step ] = rk_step( phi, nx, u, dt, dx, gam, eps, dirichlet, neumann, phasefieldModelChosen, sigma, coeffMobility, typeOfMobility)
+nx=nx-1;
+k_step = zeros(1,nx);
+mu = zeros(1,nx);
+
+%% Precalculate mu
+theta=1;
+
+for j = 1:nx
+    jm1 = j-1;
+    jp1 = j+1;
+    jm2 = j-2;
+    jp2 = j+2;
+    if j == 1
+        jm1 = nx;
+        jm2 = nx-1;
+    elseif j == 2
+        jm2 = nx;
+    elseif j == nx-1
+        jp2 = 1;
+    elseif j == nx
+        jp1 = 1;
+        jp2 = 2;
+    end
+    if (phasefieldModelChosen == "CahnHilliard")
+        free_energy_prime = 4* phi(j) * (2*phi(j) - 1) * (phi(j) - 1);
+        mu(j) = (sigma/eps)*free_energy_prime - sigma*(eps/dx^2)*(phi(jm1)-2*phi(j)+phi(jp1));
+    elseif (phasefieldModelChosen == "FloryHuggins")
+        free_energy_prime = log(pull_back(phi(j)))-log(pull_back(1-phi(j)))-theta*(phi(j)-0.5);
+        mu(j) = - sigma*(eps/dx^2)*(phi(jm1)-2*phi(j)+phi(jp1));
+    end
+end
+
+
+
+%% Compute the RK step 
+for j = 1:nx
+    jm1 = j-1; 
+        jp1 = j+1;
+    jm2 = j-2;
+    jp2 = j+2;
+    if j == 1
+        jm1 = nx;
+        jm2 = nx-1;
+    elseif j == 2
+        jm2 = nx;
+    elseif j == nx-1
+        jp2 = 1;
+    elseif j == nx
+        jp1 = 1;
+        jp2 = 2;
+    end
+
+    if (phasefieldModelChosen == "conservativeDI")
+        k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1))...
+            +gam*eps*dt/dx^2*(phi(jm1)-2*phi(j)+phi(jp1))...
+            +gam*dt/(2*dx)*(phi(jp1)*(phi(jp1)-1)*my_sign(phi(jp2)-phi(j))...
+            -(phi(jm1)*(phi(jm1)-1)*my_sign(phi(j)-phi(jm2))));
+    elseif (phasefieldModelChosen == "CahnHilliard")
+        if (typeOfMobility == "nonDegenerate")
+            k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1)) + coeffMobility*eps*(dt/dx^2)*(mu(jm1)-2*mu(j)+mu(jp1));
+        elseif (typeOfMobility == "Degenerate_1")
+            Flux_j = coeffMobility*eps*((2*pull_back(0.5*(phi(j)+phi(jm1)))-1)^2 - 1)^2*(mu(jm1)-mu(j))/dx;
+            Flux_jp1 = coeffMobility*eps*((2*pull_back(0.5*(phi(j)+phi(jp1)))-1)^2 - 1)^2*(mu(j)-mu(jp1))/dx;
+            %Flux_jp1 = coeffMobility*eps*( (((2*phi(j)-1)^2 - 1)^2*mu(j))-(((2*phi(jp1)-1)^2 - 1)^2*mu(jp1)) )/dx;
+            k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1)) + (dt/dx)*(Flux_j-Flux_jp1);
+        elseif (typeOfMobility == "Degenerate_2")
+            Flux_j = coeffMobility*eps*(-((2*pull_back(0.5*(phi(j)+phi(jm1)))-1)^2 - 1))*(mu(jm1)-mu(j))/dx;
+            Flux_jp1 = coeffMobility*eps*(-((2*pull_back(0.5*(phi(j)+phi(jp1)))-1)^2 - 1))*(mu(j)-mu(jp1))/dx;
+            %Flux_jp1 = coeffMobility*eps*( (((2*phi(j)-1)^2 - 1)^2*mu(j))-(((2*phi(jp1)-1)^2 - 1)^2*mu(jp1)) )/dx;
+            k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1)) + (dt/dx)*(Flux_j-Flux_jp1);
+        end
+    elseif(phasefieldModelChosen == "FloryHuggins")
+        Flux_j = coeffMobility*eps*((1-theta*0.5*(phi(j)+phi(jm1))*(1-0.5*(phi(j)+phi(jm1)))*(phi(jm1)-phi(j))/dx+...
+            (-((2*pull_back(0.5*(phi(j)+phi(jm1)))-1)^2 - 1))*(mu(jm1)-mu(j))/dx));
+        Flux_jp1 = coeffMobility*eps*(-((2*pull_back(0.5*(phi(j)+phi(jp1)))-1)^2 - 1))*(mu(j)-mu(jp1))/dx;
+        %Flux_jp1 = coeffMobility*eps*( (((2*phi(j)-1)^2 - 1)^2*mu(j))-(((2*phi(jp1)-1)^2 - 1)^2*mu(jp1)) )/dx;
+        k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1)) + (dt/dx)*(Flux_j-Flux_jp1);
+    end
+end
+
+   
+    if(dirichlet)    
+        if((j==1)||(j==nx))
+            k_step(j)=0;
+        elseif((j==2)||(j==nx-1))
+            k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1))...
+        +gam*eps*dt/dx^2*(phi(jm1)-2*phi(j)+phi(jp1))...
+        +gam*dt/(2*dx)*(phi(jp1)*(phi(jp1)-1)...
+                      -(phi(jm1)*(phi(jm1)-1)));
+        end
+    end
+    if(neumann)
+              if(j==1)
+                 jm1=j; 
+               k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1))...
+        +gam*eps*dt/dx^2*(phi(jm1)-2*phi(j)+phi(jp1))...
+        +gam*dt/(2*dx)*(phi(jp1)*(phi(jp1)-1)*my_sign(phi(jp2)-phi(j))...
+                      -(phi(jm1)*(phi(jm1)-1)*my_sign(phi(jp1)-phi(j))));
+              elseif(j==nx)
+                  jp1=j;
+                     k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1))...
+        +gam*eps*dt/dx^2*(phi(jm1)-2*phi(j)+phi(jp1))...
+        +gam*dt/(2*dx)*(phi(jp1)*(phi(jp1)-1)*my_sign(phi(j)-phi(jm1))...
+                      -(phi(jm1)*(phi(jm1)-1)*my_sign(phi(j)-phi(jm2))));
+        elseif((j==2)||(j==nx-1))
+            k_step(j) = u*dt/(2*dx)*(phi(jm1)-phi(jp1))...
+        +gam*eps*dt/dx^2*(phi(jm1)-2*phi(j)+phi(jp1))...
+        +gam*dt/(2*dx)*(phi(jp1)*(phi(jp1)-1)*my_sign(phi(jp1)-phi(jm1))...
+                      -(phi(jm1)*(phi(jm1)-1)*my_sign(phi(jp1)-phi(jm1))));
+        end 
+    end
+end
+

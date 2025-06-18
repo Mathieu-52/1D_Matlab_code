@@ -1,0 +1,453 @@
+clear all; close all;format long;
+%open('temp.fig'); hold on
+% 1D phase field solver + scalar transport modeling
+% central differences
+% explit time-stepping
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% Plotting Choices %%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+plot_c1=true;
+plot_c2=false;
+plot_c1pc2=false;
+plot_c_one_scalar=false;
+plot_c_one_scalar_i=false;
+plot_T=false;%false;
+plot_T_i=false;%false;
+plot_T_1=false;%false;
+plot_T_2=false;%false;
+
+
+
+% indicate the choice here "CahnHilliard" or "conservativeDI"
+%phasefieldModelChosen = "CahnHilliard";
+phasefieldModelChosen = "conservativeDI";
+%phasefieldModelChosen = "FloryHuggins";
+
+% indicate the choice here "Degenerate_1", "Degenerate_2", or "nonDegenerate" 
+typeOfMobility = "nonDegenerate";
+
+%for non dim coeffMobility = 1/Pe
+coeffMobility = 1.0;
+sigma = 1.0;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% high level parameters %%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% usually leave as is %%%%%%%%%%%%%%%%%%%%%
+
+% font size
+font_size = 15;
+marker_size = 10;
+line_width = 2.0;
+
+% one gamma and epsilon value
+single_run = true;
+
+% multiple runs with varying epsilon or gamma values
+eps_run = false;
+gam_run = false;
+
+% max iterations for intitialization
+max_iter = 1000;
+
+% single time step
+one_step = false;
+
+% use log scale
+logit = true;
+
+% initialization for phi
+initialize = true;
+
+% reinitialization in order to enforce interface equiblibrium
+reinitialize=false;
+
+% constant in front of dt
+cfactor = 0.5;
+
+% lils: small values that are used for 0/0 prevention...
+lil_bnd = eps;
+lil_den = 1E-8;
+lil_cfl = 1E-8;
+
+% parameter interval for when a parameter sweep is intended
+min_gam_u = 0.02;
+max_gam_u = 2.0;
+min_eps_dx = 0.02;
+max_eps_dx = 8.0;
+
+plotting_frequency=5;
+
+if gam_run
+    min_gam_u = 1.0;
+elseif eps_run
+    min_eps_dx = 1.0;
+end
+
+if single_run
+    ngam = 0;
+    neps = 0;
+elseif gam_run
+    neps = 0;
+elseif eps_run
+    ngam = 0;
+end
+
+ndx = 1; % this is the number of mesh resolutions that are looped over
+if ~single_run
+    ndx = 1;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% simulation parameters %%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% mesh points
+nx_base = 201;
+
+% all false is euler
+use_rk2 = false;
+use_rk3 = false;
+use_rk4 = false;
+use_rk26 = false;
+use_rk28 = false;
+use_rk410 = false;
+use_rk48 = false;
+
+% Euler dt (unnecessarily small if not using Euler time-stepping)
+use_euler_dt = true;
+
+% constant velocity
+u = 1;
+
+% final time
+t_final = 2;
+
+% Diffusion constant
+D1 = 4;
+D2 = 2;
+
+%initial concentrations
+c1_t0=3;
+c2_t0=0;
+
+% free parameter determining speed of thermal/concentration equilibrium
+Amp=100;
+
+% Henry's constant
+k_rat=5.0;
+
+HC1=1;
+HC2=HC1/k_rat;
+
+
+% boundary conditions, default is periodic
+dirichlet=0;
+neumann=0;
+
+% loop over resolutions
+for idx = 1:ndx
+    
+    % number of mesh cells
+    nx = (nx_base-1)*2^(idx-1)+1;
+    my_nx(idx) = nx;
+    
+    % mesh spacing
+    dx = 2/(nx-1);
+    
+    % edge locations
+    x_e = -1:dx:1;
+    
+    % cell center locations
+    x_c=(x_e(2:end)+x_e(1:end-1))*0.5;
+    
+    gams = zeros(1,ngam+1); % all gamma values
+    epss = zeros(neps+1,1); % all epsilon values
+    
+    
+    % loop over gamma values
+    for r = 1:ngam+1
+        gam = u*((max_gam_u-min_gam_u)*(r-1)/ngam+min_gam_u);
+        if single_run || eps_run
+            gam =1.0; % default value for gamma
+        end
+        gams(r) = gam;
+        
+        % loop over epsilon values
+        for q = 1:neps+1
+            
+            my_eps = dx*((max_eps_dx-min_eps_dx)*(q-1)/neps+min_eps_dx);
+            if single_run || gam_run
+                if (phasefieldModelChosen == "CahnHilliard")
+                    my_eps = 4*dx;
+                    coeffMobility = (3*my_eps^2);
+                else
+                    my_eps = dx; % default value for epsilon (my_eps is used becaues eps is a constant in matlab)
+                end
+            end
+            epss(q) = my_eps;
+            
+            % initial profile
+            phi = (1/2*(1+tanh((x_c+0.5)/2/my_eps)) - 1/2*(1+tanh((x_c-0.5)/2/my_eps)));
+            
+            % need to make the tanh profile equilibriated (not compulsory)
+            if (initialize)
+                ss_tol = 1E-8;
+                niter = 0;
+                max_iter=1000;
+                phi0 = 0;
+                
+                % Euler time-stepping for initialization
+                while (norm(phi-phi0,1)/norm(phi,1) > ss_tol && niter < max_iter)
+                    phi0 = phi;
+                    phi = phi0 + rk_step( phi0, nx, 0, cfactor*min(dx*dx/(2*gam*my_eps),dx/(u+gam)), dx, gam, my_eps, dirichlet, neumann, phasefieldModelChosen, sigma, coeffMobility,typeOfMobility);
+                    ss_err = norm(phi-phi0,1)/norm(phi,1);
+                    niter = niter+1;
+                end
+            end
+            
+            phi0 = phi;
+            
+            % scalar field concentration in phase 1 per total volume
+            c1 = c1_t0.*phi;%5*exp(-4*x_c.^2).*phi;%
+            c1_init = c1;
+            
+            % scalar field concentration in phase 2 per total volume
+            c2 = c2_t0.*(1-phi);%5*exp(-4*x_c.^2).*(1-phi);
+            c2_init = c2;
+            
+            % total concen
+            c_tot =  c1+c2;
+            c_tot_init = c_tot;
+            c_one_scalar = c_tot; % we start the one scalar model with the c_tot
+            c_one_scalar_i = c_tot;
+
+            % dt calculation
+            if (phasefieldModelChosen == "CahnHilliard")
+                dt = cfactor*(dx*dx);
+            else 
+                dt=cfactor*min(min(dx*dx/(2*gam*my_eps),1/(gam*my_eps/dx^2+(u+gam)^2/4/gam/my_eps)),dx*dx/2/max(D1,D2)); % euler
+            end
+            
+            if ~use_euler_dt
+                if (use_rk2)
+                    dt = cfactor*min(min(dx*dx/(2*gam*my_eps),sqrt(3)*dx/(u+gam)), dx*dx/(2*max(D1,D2))); %RK2
+                end
+                if use_rk3
+                    dt = cfactor*min(min(2.51*dx*dx/(4*gam*my_eps),sqrt(3)*dx/(u+gam)),2.51*dx*dx/(4*max(D1,D2))); %RK3
+                end
+                if (use_rk4)
+                    dt = cfactor*min(min(2.79*dx*dx/(4*gam*my_eps),2.83*dx/(u+gam)),2.79*dx*dx/4/max(D1,D2)); %RK4
+                end
+            end
+            
+            if (one_step)
+                t_final = dt;
+            end
+            
+            time = 0.0;
+            tic
+            counter=1;
+            is_final_time=false;
+            is_c1_bounded=true;
+            is_c2_bounded=true;
+            min_c1=100;
+            min_c2=100;
+            min_phi=100;
+            min_c1pc2=100;
+            max_S=-100;
+            
+            while (time < t_final)
+                
+                % special treatment for the final time step
+                if (time+dt) > t_final
+                    dt = t_final-time;
+                    is_final_time=true;
+                end
+                
+                time = time + dt;
+                phi0 = phi;
+                c1_0 = c1;
+                c2_0 = c2;
+                c_one_scalar_0 = c_one_scalar;
+                c_one_scalar_i_0=c_one_scalar_i;
+
+                
+                
+                if (reinitialize)
+                    phi0=0;
+                    ss_tol = 1E-5;
+                    niter = 0;
+                    max_iter=1000;
+                    while (norm(phi-phi0,1)/norm(phi,1) > ss_tol && niter < max_iter)
+                        phi0 = phi;
+                        phi = phi0 + rk_step( phi0, nx, 0, cfactor*min(dx*dx/(2*gam*my_eps),dx/(u+gam)), dx, gam, my_eps, dirichlet, neumann);
+                        ss_err = norm(phi-phi0,1)/norm(phi,1);
+                        niter = niter+1;
+                    end
+                end
+            
+                phi0 = phi;
+                
+                
+                    phi = phi0 + rk_step( phi0, nx, u, dt, dx, gam, my_eps, dirichlet, neumann, phasefieldModelChosen, sigma, coeffMobility, typeOfMobility);
+                    S = compute_S( phi0, nx, u, dt, dx, gam, my_eps, dirichlet, neumann, phasefieldModelChosen, sigma, coeffMobility, typeOfMobility);
+                    c1 = c1_0 + c1_rk_step( c1_0, c2_0, phi0, S, nx, u, dt, dx, D1, D2, my_eps, Amp, k_rat, dirichlet, neumann);
+                    c2 = c2_0 + c2_rk_step( c1_0, c2_0, phi0, S, nx, u, dt, dx, D1, D2, my_eps, Amp, k_rat, dirichlet, neumann);
+                    c_one_scalar = c_one_scalar_0 + c_one_scalar_rk_step( c_one_scalar_0, phi0, S, nx, u, dt, dx, D1, D2, my_eps, k_rat, dirichlet, neumann);
+                    c_one_scalar_i = c_one_scalar_i_0 + inc_c_one_scalar_rk_step( c_one_scalar_i_0, phi0, S, nx, u, dt, dx, D1, D2, my_eps, k_rat, dirichlet, neumann);
+
+                
+                T=c_one_scalar./(HC1*phi+HC2*(1-phi));
+                T_i=c_one_scalar_i./(HC1*phi+HC2*(1-phi));
+                T_1=(c1+c2)./(HC1*phi+HC2*(1-phi));%(HC1*phi);
+                T_2=c2./(HC2*(1-phi));
+    
+                % plotting evolution of data
+                if((mod(counter,plotting_frequency)==1)||(is_final_time))
+                    %plot(x_c,(c1_t0*phi-c1),':k','linewidth',2);
+%                      hold on
+                      plot(x_c,1*(phi),'-k','linewidth',2);
+                      hold on
+                    if(plot_c1)
+                        plot(x_c,c1,'-.b','linewidth',2);
+                        hold on
+                    end
+                    if(plot_c2)
+                        plot(x_c,c2,':r','linewidth',2);
+                        hold on
+                    end
+                    if(plot_c_one_scalar)
+                        plot(x_c,c_one_scalar,':b','linewidth',2,'markersize',10);
+                        hold on
+                    end
+                    if(plot_c_one_scalar_i)
+                        plot(x_c,c_one_scalar_i,'--r','linewidth',2,'markersize',10);
+                        hold on
+                    end
+                    if(plot_c1pc2)
+                        plot(x_c,c1+c2,'--m','linewidth',2,'markersize',10);
+                        hold on
+                    end
+                    if(plot_T)
+                          p_l=plot(x_c,T,'--k','linewidth',2,'markersize',10);
+                          hold on
+                    end
+                    if(plot_T_i)
+                          p_l=plot(x_c,T_i,'--k','linewidth',2,'markersize',10);
+                          hold on
+                    end
+                    if(plot_T_1)
+                          p_l=plot(x_c,T_1,'--k','linewidth',2,'markersize',10);
+                          hold on
+                    end
+                    if(plot_T_2)
+                          p_l=plot(x_c,T_2,':r','linewidth',2,'markersize',10);
+                          hold on
+                    end
+                    hold on
+                    %plot(x_c,1*(c1_t0*phi-c1),'-.k','linewidth',2);
+                    hold off
+                    %               saveas(gcf,sprintf('image_vor_%d',counter),'fig')
+                    %               set(gcf,'PaperUnits','inches','PaperPosition',[0 0 16 12]);
+                    %     print(gcf,'-depsc','-r100',sprintf('image_%d',counter));
+                    
+                    xlabel('$x$','interpreter','latex','fontsize',15);
+                    set(gca,'Fontsize',15)
+                    pause(0.1)
+                    hold off
+                    time_percent=100*time/t_final
+%                     iteration=time/dt
+%                     if(iteration>=19)
+%                         pause(0.01)
+%                     end
+                    min(c1+c2)
+                end
+                min_c1=[min_c1; min(c1)];
+                min_c2=[min_c2; min(c2)];
+                min_phi=min(min_phi, min(phi));
+                min_c1pc2=[min_c1pc2; min(c1+c2)];
+                max_S=[max_S; max((phi(3:end)-phi(1:end-2)).*(c2(3:end)-c2(1:end-2)))];
+                is_c1_bounded=(min(c1)>=0 && is_c1_bounded);
+                is_c2_bounded=(min(c2)>=0 && is_c2_bounded);
+                total_time(counter)=time;
+                total_heat(counter)=sum(c1+c2);
+                counter=counter+1;
+            end
+            
+            toc
+            
+        end
+    end
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% plotting for multiple case runs (not important usually) %%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+if eps_run
+    figure()
+    loglog(epss,h0,'k-o',epss,d0,'k-x',...
+        'linewidth',2,'markersize',10); hold on;
+    loglog(epss,5e-3*epss.^(0),'k--',epss,1.35*epss.^1,'k-.','linewidth',1)
+    l = legend('$E_{\epsilon}$','$E_{\Delta}$','$\mathcal{O}(\epsilon^{0})$','$\mathcal{O}(\epsilon^1)$');
+    % axis([1.5 3.5 min(d0)/1.25 max(i0)*1.25]);
+    %axis([1 2 2E-4 18E-4])
+    set(l,'interpreter','latex','Fontsize',15);
+    legend('boxoff')
+    set(gca,'Fontsize',15)
+    axis tight
+    %     title('$\gamma/u = 1$, $\Delta x/D = 1/1600$','interpreter','latex','fontsize',15)
+    xlabel('$\epsilon/D$','interpreter','latex','fontsize',15);
+    ylabel('Error','interpreter','latex','fontsize',15);
+end
+if (gam_run)
+    figure()
+    loglog(gams,h0,'k-o',gams,d0,'k-x','linewidth',2,'markersize',10); hold on;
+    loglog(gams,9*10^(-4)*gams.^0,'k--','linewidth',1)
+    l = legend('$E_{\epsilon}$','$E_{\Delta}$','$\mathcal{O}(\gamma^0)$');
+    %axis([1 2 2.5E-4 7E-4]);
+    set(l,'interpreter','latex','Fontsize',15);
+    legend('boxoff')
+    set(gca,'Fontsize',15)
+    axis tight
+    %     title('$\epsilon/\Delta x = 1$, $\Delta x/D = 1/1600$','interpreter','latex','fontsize',15)
+    xlabel('$\gamma/u$','interpreter','latex','fontsize',15);
+    ylabel('Error','interpreter','latex','fontsize',15);
+end
+if ~single_run
+    figure()
+    
+    % loglog(2./my_nx,abs(2*tanh_err-2.776/25),'ko-',2./my_nx,adv_err,'kx-',2./my_nx,abs(2*tot_err-2.776/25),'k^-',...
+    %     'linewidth',2,'markersize',10); hold on;
+    loglog(2./my_nx,abs(tanh_err),'ko-',2./my_nx,adv_err,'kx-',2./my_nx,tot_err,'k^-',...
+        'linewidth',2,'markersize',10); hold on;
+    loglog(2./my_nx,5e-2*(2./my_nx).^(+0),'k--','linewidth',1);hold on;
+    loglog(2./my_nx,0.5*(2./my_nx).^(+1),'k-.','linewidth',1);
+    %     title('$\gamma/u = 1/2$, $\epsilon/\Delta x = 3/2$','interpreter','latex','fontsize',15)
+    xlabel('$\Delta x/D$','interpreter','latex','fontsize',15);
+    ylabel('Error','interpreter','latex','fontsize',15);
+    axis tight;
+    %axis([1/1600 1/25 1E-4 1E-1]);
+    l = legend('$E_{\epsilon}$','$E_{\Delta}$','$E_{tot}$',...
+        '$\mathcal{O}(\Delta x^{0}~)$','$\mathcal{O}(\Delta x^{1}~)$','Location','NorthWest');
+    set(l,'interpreter','latex','Fontsize',15);
+    legend('boxoff')
+    set(gca,'Fontsize',15)
+    
+    figure()
+    plot(total_time,abs(total_mass/total_mass(1)-1),'-ok','linewidth',2,'markersize',10)
+    xlabel('$t$','interpreter','latex','fontsize',15);
+    ylabel('$(\int{\phi(t)}-\int{\phi(t=0)})/\int{\phi(t=0)}$','interpreter','latex','fontsize',15);
+    axis tight;
+    %axis([1/1600 1/25 1E-4 1E-1]);
+    %     l = legend('$E_{\epsilon}$','$E_{\Delta}$','$E_{tot}$',...
+    %         '$\mathcal{O}(\Delta x^{0}~)$','$\mathcal{O}(\Delta x^{1}~)$','Location','NorthWest');
+    %     set(l,'interpreter','latex','Fontsize',15);
+    legend('boxoff')
+    set(gca,'Fontsize',15)
+end
