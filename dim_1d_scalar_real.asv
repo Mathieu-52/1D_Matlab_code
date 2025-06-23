@@ -61,95 +61,59 @@ choice = input("choice = " );
 
 switch choice
     case 1 
-                k_rat=1;
-             % same solubility in each phase 1 & 2
-                D1 = 1.0;  
-                D2 = 1.0; 
-                D_s = 0.2;
-                c1_t0 = 1.0;
-                c2_t0 = 1.0; 
-                srf_0=0.0;
-                t_final = 1.5; 
-            % Surfactant parameters
-                r_a1=3;
-                r_a2=1;
-                r_d1=1;
-                r_d2=r_a2*(r_d1/r_a1)/k_rat; %require this for equilibrium 
-                s_inf=1;
+
+            k_rat = 1;
+            D1 = 1.0; D2 = 1.0; D_s = 0.2;
+            c1_t0 = 1.0; c2_t0 = 1.0; srf_0 = 0.0;
+            t_final = 2.1;
+        
+            r_a1 = 3; r_a2 = 1; r_d1 = 1;
+            r_d2 = (r_d1 * r_a2) / (k_rat * r_a1);  
+            s_inf = 1.0;
+
 
 
         
     case 2 
-                k_rat=3;          
-            % realistic solubility in one phase (large diff ratio)
-            % D1 >> D2 -> adsorption ++ in phase 1 (and no in phase 2)
-                D1 = 1.0;  
-                D2 = 0.01;  
-                D_s = 0.2;
-                c1_t0 = 1.0;
-                c2_t0 = 1.0;    
-                srf_0=0.0;
-                t_final = 2; 
-            % Surfactant parameters
-                r_a1=3;
-                r_a2=1;
-                r_d1=1;
-                r_d2=r_a2*(r_d1/r_a1)/k_rat;%require this for equilibrium
-                s_inf=1;
+            k_rat = 1;
+            D1 = 1.0; D2 = 0.25; D_s = 0.2;
+            c1_t0 = 1.0; c2_t0 = 1.0; srf_0 = 0.0;
+            t_final = 4.5;
+        
+            r_a1 = 3; r_a2 = 1; r_d1 = 1;
+            r_d2 = (r_d1 * r_a2) / (k_rat * r_a1);  
+            s_inf = 1.0;
         
     case 3 
-                k_rat=3;
-                %  confined to one phase and interface (choice phase 1)
-                % no absorption to phase 2 and desorbtion from phase 1
-                D1 = 1.0;  
-                D2 = 0.0; 
-                D_s = 0.2;
-                c1_t0 = 3.0;
-                c2_t0 = 0.0; 
-                srf_0=0.0;
-                t_final = 2; 
-            % Surfactant parameters
-                r_a1=3;
-                r_a2=0.1;
-                r_d1=0.1;
-                r_d2=r_a2*(r_d1/r_a1)/k_rat;%require this for equilibrium
-                s_inf=1;
+        % choice phase 2 + interface 
+            k_rat = 2;
+            D1 = 0; D2 = 1.0; D_s = 0.2;
+            c1_t0 = 0.0; c2_t0 = 2.0; srf_0 = 0.0;
+            t_final = 3.0;
+        
+            r_a1 = 0.; r_a2 = 2; r_d1 = 0;
+            r_d2 = 1;  
+            s_inf = 1.0;
         
     case 4 
-                k_rat=3;
-             % interface confined
-                D1 = 0.1;  
-                D2 = 0.0; 
-                D_s = 0.2;
-                c1_t0 = 0.0;
-                c2_t0 = 0.0; 
-                srf_0 = 2.0;
-                t_final = 2; 
-            % Surfactant parameters
-                r_a1=0.;
-                r_a2=0;
-                r_d1=0;
-                r_d2 = 0.;
-                s_inf=1;
+            k_rat = 2;
+            D1 = 0.0; D2 = 0.0; D_s = 0.1;
+            c1_t0 = 0.0; c2_t0 = 0.0; srf_0 = 0.5;
+            t_final = 0.4;
+        
+            r_a1 = 0; r_a2 = 0; r_d1 = 0;
+            r_d2 = 0;
+            s_inf = 1.0;
         
     case 5 
-               k_rat=3;
-             % limit of s_inf=0 (not on interface), including fake interface
-                D1 = 1.0;  
-                D2 = 1.0; 
-                D_s = 0.2;
-                c1_t0 = 1.0;
-                c2_t0 = 1.0; 
-                srf_0=0.0;
-                t_final = 2; 
-            % Surfactant parameters
-                r_a1=3;
-                r_a2=2;
-                r_d1=1;
-                r_d2=r_a2*(r_d1/r_a1)/k_rat;%require this for equilibrium
-                s_inf=0;
-    
+            k_rat = 1;
+            D1 = 1.0; D2 = 1.0; D_s = 0.0;
+            c1_t0 = 1.0; c2_t0 = 1.0; srf_0 = 0.0;
+            t_final = 0.8;   % enought to get equilibrium state 
         
+            r_a1 = 2; r_a2 = 2; r_d1 = 1;
+            r_d2 = (r_d1 * r_a2) / (k_rat * r_a1);  
+            s_inf = 0.0;
         
     otherwise
                 error('Invalid choice. Please enter 1, 2, 3, 4 or 5.');
@@ -167,9 +131,7 @@ HC2=HC1/k_rat;
 
 equilibrium_reached = false; 
 
-
 error_5 = [];  % error for case 5 
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -260,7 +222,15 @@ neumann=0;
                 srf_init=srf_0.*Compute_Delta(phi,D);
                 srf=srf_init;
                 srf_os=srf_init+c1_init+c2_init;
-    
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+                c_total = dx*sum(c1_init + c2_init + srf_init);
+                disp("value of c_total = " + c_total)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+
                 % dt calculation       
                 if ~use_euler_dt
                     if (my_time_stepper.use_rk2)
@@ -328,6 +298,7 @@ neumann=0;
                      c_one_scalar_i_np1=c_one_scalar_i;
                      srf_np1=srf;
                      srf_os_np1=srf_os;
+
     
                     for rk_count=1:1:rk_order
                         [d_phi,S]= rk_step( phi_int, nx, u, dt, dx, gam, my_eps, dirichlet, neumann, my_pf, D);
@@ -363,25 +334,37 @@ neumann=0;
                      srf=srf_np1;
                      srf_os=srf_os_np1;
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+                      
+                    tol = 1e-6;
+       
+                    mask = (phi > 1e-2) & (phi < 1 - 1e-2);  % avoid divisions by 0
+                    
 
-% identification de c1_tilde et c2_tilde 
-% for any point in the mesh, we must have : c1(i) = c1_tilde*phi(i)
-% and c1_tilde is a coefficient , then we can take a any point in the mesh
-                    %c1_tilde = c1_np1(14)/phi_np1(14);
-                    %c2_tilde = c2_np1(14)/(1-phi_np1(14));
+                    eq_diff = abs(c1_np1(mask)./phi(mask) - k_rat * c2_np1(mask)./(1 - phi(mask)));
+                    
+                    max_err = max(eq_diff);
+                    
+                    if max_err < tol
+                        disp("Equilibrium satisfied --------------- YESSSSSSSSSSS")
+                        disp("time  = "+ time)   % to get a precise final time ( = equilibrium state )
+                    else
+                        disp("Equilibrium not satisfied")
+                        continue  
+                    end
+
+                      
+
+
 
 
 % error 
+
                     error_5(end+1) = norm((c_one_scalar - (c1 + c2)), inf);
-
-                    %fprintf('Step %d/%d: c1 max=%.3e, min=%.3e | c2 max=%.3e, min=%.3e | phi max=%.3e, min=%.3e\n', ...
-                     %   idx, my_run.ndx, max_c1(idx), min_c1(idx), max_c2(idx), min_c2(idx), max_srf(idx), min_srf(idx));
-                
-
+                               
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                     T=c_one_scalar./(HC1*phi+HC2*(1-phi));
                     T_i=c_one_scalar_i./(HC1*phi+HC2*(1-phi));
@@ -435,8 +418,8 @@ neumann=0;
 
 
 % MASS CONSERVATION (validate for 1 & 3 scalars model)
-mass_init  =  sum(c1_init + c2_init + srf_init);
-mass_final = sum(c1_np1 + c2_np1 + srf_np1);
+mass_init  =  dx*sum(c1_init + c2_init + srf_init);
+mass_final = dx*sum(c1_np1 + c2_np1 + srf_np1);
 
 
             
@@ -450,6 +433,156 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% construction of the function from data
+xq = linspace(min(x_c), max(x_c), 1000);
+f_phi = @(xq) interp1(x_c, phi, xq, 'linear' , 'extrap');  
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Verification : if the curves of f_phi and phi are stacked in the x domain
+
+%figure;
+%set(gcf, 'Color', 'w');  % Fond blanc de la figure
+%plot(x_c, f_phi(x_c), 'r-x', 'LineWidth', 2);
+%hold on;
+%plot(x_c, phi, 'b-x', 'LineWidth', 2);
+%hold off;
+
+%xlabel('x');
+%ylabel('phi');
+%legend('Phi function', 'Phi vector');
+%title('Curves of phi function and vector');
+%grid on;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%  Integral of f_phi in the x domain [-1;1]   %%%%%%%%%%%%%     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+I1 = sum(phi)*dx;
+I2 = sum(Compute_Delta(phi,D))*dx;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%    Calcul of the cst c_total    %%%%%%%%%%%%%     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%c_total = dx*sum(c1_np1 + c2_np1 + srf_np1);
+%c_total = (c1_t0+c2_t0+srf_0);
+%c_total = 1.4;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%    Calcul of c2 analytical     %%%%%%%%%%%%%     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if (choice ~= 4 )
+    c2_ana_tilde = c2_analytical(r_a2,r_d2,c_total,s_inf,k_rat,I1,I2); 
+    
+    c2_ana = c2_ana_tilde*(1-phi); 
+    
+    figure;
+    plot(x_c, c2_np1, 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, c2_ana, 'b-o', 'LineWidth', 2);
+    hold off;
+    
+    xlabel('x');
+    ylabel('c');
+    legend('c2','c2 ana');
+    title('Numerical and analytical c2 results at equilibrium');
+    grid on;
+else 
+    c2_ana_tilde = 0;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%    Calcul of S analytical     %%%%%%%%%%%%%     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% using delta = 6phi(1-phi)
+if ~ismember(choice, [4 5])
+    S_tilde_ana = ((r_a2*s_inf*c2_ana_tilde)/(r_d2+r_a2*c2_ana_tilde));
+    S_ana = S_tilde_ana*6*phi.*(1-phi); 
+    
+    figure;
+    plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, S_ana, 'b-o', 'LineWidth', 2);
+    hold off;
+
+    
+    xlabel('x');
+    ylabel('S');
+    legend('S','S ana');
+    title('Numerical and analytical S results at equilibrium');
+    grid on;
+elseif (choice == 4)
+    S_ana = srf_0.*Compute_Delta(phi,D);
+    
+    figure;
+    plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, S_ana, 'b-o', 'LineWidth', 2);
+    hold off;
+
+    
+    xlabel('x');
+    ylabel('S');
+    legend('S','S ana');
+    title('Numerical and analytical S results at equilibrium');
+    grid on;
+end 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%    Calcul of c1 analytical     %%%%%%%%%%%%%     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if ~ismember(choice, [3 4])
+    c1_ana = c2_ana_tilde*k_rat*phi;
+    
+    figure;
+    plot(x_c, c1_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, c1_ana, 'b-o', 'LineWidth', 2);
+    hold off;
+    
+    xlabel('x');
+    ylabel('c');
+    legend('c1','c1 ana');
+    title('Numerical and analytical c1 results at equilibrium');
+    grid on;
+end 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%% TEST PRCQ CA MARCHE PAS PTN %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%disp("c2 tilde num = " + c2_np1./(1-phi))
+%disp("                                    ")
+%disp("c2 tilde ana = " + c2_ana_tilde)
+
+%disp("                                    ")
+%disp("S tilde num = " + srf_np1./(6*phi.*(1-phi)))
+%disp("                                    ")
+%disp("S tilde ana = " + S_tilde_ana)
+
+%disp("                                    ")
+%disp("c1 tilde num = " + c1_np1./phi)
+%disp("                                    ")
+%disp("c1 tilde ana = " + c2_ana_tilde*k_rat)
+
+
+%disp("                                    ")
+%disp("value of sum c_init= " + (c1_t0+c2_t0+srf_0))
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%      ERROR        %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
 if (choice == 5)
     figure;
@@ -469,106 +602,15 @@ if (choice == 5)
     ylabel('Relative error (∞-norm)');
     title('Error between c\_one\_scalar and c1 + c2');
     grid on;
+else
+    error_c1 = norm((c1_np1 - c1_ana), inf);
+    error_c2 = norm((c2_np1 - c2_ana), inf);
+    error_S = norm((srf_np1 - S_ana), inf);
+
+    disp(" Error c1 = " + error_c1)
+    disp(" Error c1 = " + error_c1)
+
+
+
 end 
 
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% construction of the function from data
-xq = linspace(min(x_c), max(x_c), 1000);
-f_phi = @(xq) interp1(x_c, phi, xq, 'linear' , 'extrap');  
-
-
-
-
-% Verification : if the curves of f_phi and phi are stacked in the x domain
-figure;
-set(gcf, 'Color', 'w');  % Fond blanc de la figure
-plot(x_c, f_phi(x_c), 'r-x', 'LineWidth', 2);
-hold on;
-plot(x_c, phi, 'b-x', 'LineWidth', 2);
-hold off;
-
-xlabel('x');
-ylabel('phi');
-legend('Phi function', 'Phi vector');
-title('Curves of phi function and vector');
-grid on;
-
-% Integral of f_phi in the x domain [-1;1]
-
-integral_ = integral(@(x) f_phi(x), -1, 1);
-integral_2 = integral(@(x) f_phi(x).^2, -1, 1);
-
-% Calcul of c2 analytical 
-c_total = c1_t0 + c2_t0 + srf_0; 
-c2_ana_tilde = c2_analytical(r_a2,r_d2,c_total,s_inf,k_rat,integral_,integral_2); 
-
-c2_ana = c2_ana_tilde.*(1-phi); 
-
-
-figure;
-plot(x_c, c2_np1  , 'r-x', 'LineWidth', 2);
-hold on;
-plot(x_c, c2_ana, 'b-x', 'LineWidth', 2);
-hold off;
-
-xlabel('x');
-ylabel('c');
-legend('c2','c2 ana');
-title('Numerical and analytical c2 results at equilibrium');
-grid on;
-
-% Calcul of S analytical 
-% using delta = 6phi(1-phi)
-if (choice ~= 5)
-    S_tilde_ana = ((r_a2*s_inf*c2_ana_tilde)/(r_d2+r_a2*c2_ana_tilde));
-    S_ana = S_tilde_ana*6*phi.*(1-phi); 
-    
-    
-    
-    figure;
-    plot(x_c, srf  , 'r-x', 'LineWidth', 2);
-    hold on;
-    plot(x_c, S_ana, 'b-x', 'LineWidth', 2);
-    hold off;
-    
-    xlabel('x');
-    ylabel('S');
-    legend('S','S ana');
-    title('Numerical and analytical S results at equilibrium');
-    grid on;
-end 
-
-% Calcul of c1 analytical 
-c1_ana = k_rat*c2_ana_tilde.*phi;
-
-figure;
-plot(x_c, c1_np1  , 'r-x', 'LineWidth', 2);
-hold on;
-plot(x_c, c1_ana, 'b-x', 'LineWidth', 2);
-hold off;
-
-xlabel('x');
-ylabel('c');
-legend('c1','c1 ana');
-title('Numerical and analytical c1 results at equilibrium');
-grid on;
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%      Courbes d'erreurs     %%%%%%%%%%%%%     
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-error_c1 = norm(c1 - c1_ana, inf); 
-error_c2 = norm(c2-c2_ana,inf);
-error_S = norm(srf-S_ana,inf); 
-
-    figure;
-    semilogy(error_c1, 'r-o');
-    xlabel('Time step');
-    ylabel('Relative error (∞-norm)');
-    title('Error between c\_1 and c1 + c2');
-    grid on;
