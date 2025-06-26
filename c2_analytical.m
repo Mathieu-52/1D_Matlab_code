@@ -6,8 +6,8 @@ function c2_ana_tilde = c2_analytical( r_a2, r_d2, c_total, s_inf, k_rat,I1,I2)
 
 
     a = r_a2 * (I1 * (k_rat - 1) + 2);
-    b = (I1*(k_rat-1)+2)*r_d2 + s_inf*I2*r_a2-2*r_a2*c_total;
-    c = -2 * r_d2 * c_total;
+    b = (r_d2*(I1*(k_rat-1)+2) + r_a2*(s_inf*I2-2*c_total));
+    c = -2* r_d2 * c_total;
 
     delta = b^2 - 4*a*c;
 
@@ -20,10 +20,9 @@ function c2_ana_tilde = c2_analytical( r_a2, r_d2, c_total, s_inf, k_rat,I1,I2)
     else 
         root1 = (-b + sqrt(delta)) / (2*a);
         root2 = (-b - sqrt(delta)) / (2*a);
+    
 
-
-        c2_ana_tilde = max(root1, root2)/2;  
-        %c2_ana_tilde = abs(min(root1,root2)); 
+        c2_ana_tilde = max(root1, root2);  
 
     end
 end

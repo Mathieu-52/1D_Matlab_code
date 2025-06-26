@@ -73,26 +73,28 @@ switch choice
 
 
 
-        
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+% CLC CE TEST DE CON 
     case 2 
             k_rat = 1;
-            D1 = 1.0; D2 = 0.25; D_s = 0.2;
-            c1_t0 = 1.0; c2_t0 = 1.0; srf_0 = 0.0;
-            t_final = 4.5;
+            D1 = 1.0; D2 = 0.000001; D_s = 0.2;
+            c1_t0 = 2.0; c2_t0 = 0.0; srf_0 = 0.3;
+            t_final = 2.;
         
-            r_a1 = 3; r_a2 = 1; r_d1 = 1;
-            r_d2 = (r_d1 * r_a2) / (k_rat * r_a1);  
+            r_a1 = 3; r_a2 = 0; r_d1 = 1;
+            %r_d2 = (r_d1 * r_a2) / (k_rat * r_a1); 
+            r_d2 = 0;
             s_inf = 1.0;
-        
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     case 3 
-        % choice phase 2 + interface 
-            k_rat = 2;
-            D1 = 0; D2 = 1.0; D_s = 0.2;
-            c1_t0 = 0.0; c2_t0 = 2.0; srf_0 = 0.0;
-            t_final = 3.0;
+        % choice phase 1 + interface 
+            k_rat = 1;
+            D1 = 1.0; D2 = 0.0; D_s = 1.0;
+            c1_t0 = 2.0; c2_t0 = 0.0; srf_0 = 0.3;
+            t_final = 2.0;
         
-            r_a1 = 0.; r_a2 = 2; r_d1 = 0;
-            r_d2 = 1;  
+            r_a1 = 3; r_a2 = 0; r_d1 = 1;
+            r_d2 = 0; 
             s_inf = 1.0;
         
     case 4 
@@ -116,7 +118,7 @@ switch choice
             s_inf = 0.0;
         
     otherwise
-                error('Invalid choice. Please enter 1, 2, 3, 4 or 5.');
+            error('Invalid choice. Please enter 1, 2, 3, 4 or 5.');
 end
 
           
@@ -132,6 +134,13 @@ HC2=HC1/k_rat;
 equilibrium_reached = false; 
 
 error_5 = [];  % error for case 5 
+c1_all = [];
+c2_all = [];
+time_vec = [];
+c_sum = [];
+c_all_os = [];
+srf_sum = [];
+srf_all_os = [];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -168,7 +177,7 @@ neumann=0;
         gams = zeros(1,my_run.ngam+1); % all gamma values
         epss = zeros(my_run.neps+1,1); % all epsilon values
 
-        
+
         
         % loop over gamma values
         for r = 1:my_run.ngam+1
@@ -227,7 +236,6 @@ neumann=0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
                 c_total = dx*sum(c1_init + c2_init + srf_init);
-                disp("value of c_total = " + c_total)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 
@@ -272,9 +280,10 @@ neumann=0;
                 counter=1;
                 is_final_time=false;
     
+                it = 0; % compteur d'iterations, instant initial deja fait avant 
                 
                 while (time < t_final)
-                    
+                    it = it + 1; 
                     % special treatment for the final time step
                     if (time+dt) > t_final
                         dt = t_final-time;
@@ -298,8 +307,17 @@ neumann=0;
                      c_one_scalar_i_np1=c_one_scalar_i;
                      srf_np1=srf;
                      srf_os_np1=srf_os;
-
-    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        if mod(it, 1000) == 0
+                            c1_all(:, end+1) = c1_np1;
+                            c2_all(:, end+1) = c2_np1;
+                            time_vec(end+1) = time;
+                            c_sum(:,end+1) = c1_np1 + k_rat*c2_np1;
+                            c_all_os(:,end+1) = c_one_scalar_np1;
+                            srf_sum(:,end+1) = c1_np1 + c2_np1 + srf_np1;
+                            srf_all_os(:,end+1) = srf_os_np1;
+                        end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                     for rk_count=1:1:rk_order
                         [d_phi,S]= rk_step( phi_int, nx, u, dt, dx, gam, my_eps, dirichlet, neumann, my_pf, D);
                         d_c1=c1_rk_step( c1_int, c2_int, phi_int, S, srf_int, nx, u, dt, dx, D1, D2, my_eps, Amp, k_rat, dirichlet, neumann, my_pf, D, r_a1, r_a2, r_d1, r_d2, s_inf);
@@ -337,24 +355,41 @@ neumann=0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                       
-                    tol = 1e-6;
-       
-                    mask = (phi > 1e-2) & (phi < 1 - 1e-2);  % avoid divisions by 0
-                    
+                    % tol = 1e-6;
+                    % 
+                    % mask = (phi > 1e-2) & (phi < 1 - 1e-2);  % avoid divisions by 0
+                    % 
+                    % 
+                    % eq_diff = abs(c1_np1(mask)./phi(mask) - k_rat * c2_np1(mask)./(1 - phi(mask)));
+                    % 
+                    % max_err = max(eq_diff);
+                    % 
+                    % if max_err < tol
+                    %     disp("Equilibrium satisfied --------------- YESSSSSSSSSSS")
+                    %     disp("time  = "+ time)   % to get a precise final time ( = equilibrium state )
+                    % else
+                    %     disp("Equilibrium not satisfied")
+                    %     continue          
+                    % 
+                    % end
 
-                    eq_diff = abs(c1_np1(mask)./phi(mask) - k_rat * c2_np1(mask)./(1 - phi(mask)));
-                    
-                    max_err = max(eq_diff);
-                    
-                    if max_err < tol
-                        disp("Equilibrium satisfied --------------- YESSSSSSSSSSS")
-                        disp("time  = "+ time)   % to get a precise final time ( = equilibrium state )
-                    else
-                        disp("Equilibrium not satisfied")
-                        continue  
-                    end
 
-                      
+
+                    % get c2_tilde_numerical 
+                    c2_tilde_num = c2_np1./(1-phi);
+                    
+                    % get c1_tilde_numerical 
+                    %c1_tilde_num = bnd(c1_np1)./bnd(phi);
+                    epsilon = 1e-6;
+                    phi_threshold = 1e-3;  % seuil minimal pour dire qu'on est dans la phase 1 ou l'interface
+                    vec_c1_tilde_num = zeros(size(c1_np1));  % initialisation
+                    
+                    % Calcul uniquement là où phi est assez grand
+                    mask = phi > phi_threshold;
+                    vec_c1_tilde_num(mask) = c1_np1(mask) ./ (phi(mask) + epsilon);
+
+                    c1_tilde_num = max(vec_c1_tilde_num); 
+
 
 
 
@@ -407,9 +442,14 @@ neumann=0;
     end
 
 
-
-
-
+% to save the final c1 and c2 
+c1_all(:, end+1) = c1_np1;
+c2_all(:, end+1) = c2_np1;
+time_vec(end+1) = time;
+c_sum(:,end+1) = c1_np1 + k_rat*c2_np1;
+c_all_os(:,end+1) = c_one_scalar_np1;
+srf_sum(:,end+1) = c1_np1 + c2_np1 + srf_np1;
+srf_all_os(:,end+1) = srf_os_np1;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -431,151 +471,226 @@ end
 
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% construction of the function from data
-xq = linspace(min(x_c), max(x_c), 1000);
-f_phi = @(xq) interp1(x_c, phi, xq, 'linear' , 'extrap');  
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Verification : if the curves of f_phi and phi are stacked in the x domain
-
-%figure;
-%set(gcf, 'Color', 'w');  % Fond blanc de la figure
-%plot(x_c, f_phi(x_c), 'r-x', 'LineWidth', 2);
-%hold on;
-%plot(x_c, phi, 'b-x', 'LineWidth', 2);
-%hold off;
-
-%xlabel('x');
-%ylabel('phi');
-%legend('Phi function', 'Phi vector');
-%title('Curves of phi function and vector');
-%grid on;
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%  Integral of f_phi in the x domain [-1;1]   %%%%%%%%%%%%%     
+%%%%%%%%%%%%%%%%%%%%% SEMI-ANALYTICAL SOLUTION %%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-I1 = sum(phi)*dx;
-I2 = sum(Compute_Delta(phi,D))*dx;
+% get S_tilde_numerical 
+%S_tilde_num = srf_np1./Compute_Delta(phi,D);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%    Calcul of the cst c_total    %%%%%%%%%%%%%     
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%c_total = dx*sum(c1_np1 + c2_np1 + srf_np1);
-%c_total = (c1_t0+c2_t0+srf_0);
-%c_total = 1.4;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%    Calcul of c2 analytical     %%%%%%%%%%%%%     
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-if (choice ~= 4 )
-    c2_ana_tilde = c2_analytical(r_a2,r_d2,c_total,s_inf,k_rat,I1,I2); 
-    
-    c2_ana = c2_ana_tilde*(1-phi); 
-    
-    figure;
-    plot(x_c, c2_np1, 'r-x', 'LineWidth', 2);
-    hold on;
-    plot(x_c, c2_ana, 'b-o', 'LineWidth', 2);
-    hold off;
-    
-    xlabel('x');
-    ylabel('c');
-    legend('c2','c2 ana');
-    title('Numerical and analytical c2 results at equilibrium');
-    grid on;
-else 
-    c2_ana_tilde = 0;
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%    Calcul of S analytical     %%%%%%%%%%%%%     
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% using delta = 6phi(1-phi)
-if ~ismember(choice, [4 5])
-    S_tilde_ana = ((r_a2*s_inf*c2_ana_tilde)/(r_d2+r_a2*c2_ana_tilde));
-    S_ana = S_tilde_ana*6*phi.*(1-phi); 
-    
+if (choice == 1)
+    S_ana = ((r_a2*s_inf*mean(c2_tilde_num))/(r_d2+r_a2* ...
+        mean(c2_tilde_num)))*Compute_Delta(phi,D);
+    S_error = sum(abs(srf_np1-S_ana))/sum(S_ana);
+    %S_error = norm((srf_np1-S_ana),inf);
+    disp("error test S = " + S_error)
+    disp("                                    ")
     figure;
     plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
     hold on;
-    plot(x_c, S_ana, 'b-o', 'LineWidth', 2);
+    plot(x_c, S_ana, 'b--', 'LineWidth', 2);
     hold off;
-
     
     xlabel('x');
-    ylabel('S');
-    legend('S','S ana');
-    title('Numerical and analytical S results at equilibrium');
-    grid on;
-elseif (choice == 4)
-    S_ana = srf_0.*Compute_Delta(phi,D);
-    
-    figure;
-    plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
-    hold on;
-    plot(x_c, S_ana, 'b-o', 'LineWidth', 2);
-    hold off;
+    ylabel('');
+    legend('S num','S ana');
+    title('');
+    grid off;
 
-    
-    xlabel('x');
-    ylabel('S');
-    legend('S','S ana');
-    title('Numerical and analytical S results at equilibrium');
-    grid on;
-end 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%    Calcul of c1 analytical     %%%%%%%%%%%%%     
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-if ~ismember(choice, [3 4])
-    c1_ana = c2_ana_tilde*k_rat*phi;
-    
+    c1_ana = mean(c2_tilde_num)*k_rat.*phi;
+    c1_error = sum(abs(c1_np1-c1_ana))/sum(c1_ana);
+    %c1_error = norm((c1_np1-c1_ana),inf);
+    disp(" error test c1  = " + c1_error)
+    disp("                                    ") 
     figure;
     plot(x_c, c1_np1  , 'r-x', 'LineWidth', 2);
     hold on;
-    plot(x_c, c1_ana, 'b-o', 'LineWidth', 2);
+    plot(x_c, c1_ana, 'b--', 'LineWidth', 2);
     hold off;
     
     xlabel('x');
-    ylabel('c');
-    legend('c1','c1 ana');
-    title('Numerical and analytical c1 results at equilibrium');
+    ylabel('');
+    legend('c1 num','c1 ana');
+    title('');
+    grid off;
+
+
+    c2_ana = c1_tilde_num.*(1-phi)/k_rat;
+    c2_error = sum(abs(c2_np1-c2_ana))/sum(c2_ana);
+    disp(" error test c2  = " + c2_error)
+    disp("                                    ") 
+    figure;
+    plot(x_c, c2_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, c2_ana, 'b--', 'LineWidth', 2);
+    hold off;
+    
+    xlabel('x');
+    ylabel('');
+    legend('c2 num','c2 ana');
+    title('');
+    grid off;
+
+
+    error_t_srf = zeros(length(time_vec)); % contains error at each time 
+
+    figure;
+    hold on;
+    for k = 1:length(time_vec)
+        plot(x_c, srf_sum(:, k), 'r--'); 
+        plot(x_c, srf_all_os(:,k), 'b--')
+        error_t_srf(k) = sum(abs(srf_sum(:,k)- ...
+            srf_all_os(:,k)))/sum(srf_sum(:,k));
+    end
+    xlabel('x'); ylabel('');
+    title('');
+    legend('C1 + C2 + S',' Srf one scalar');
+    hold off;
+
+% Then we can plot the error of srf_os as a function of iterations
+    figure;
+    semilogy(error_t_srf, 'b-o');
+    xlabel('Time step');
+    ylabel('');
+    title('');
     grid on;
+% the last vector of error_t_srf is the error at quilibrium so 
+    error_x_srf =  error_t_srf(end+1);
+    figure;
+    plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, S_ana, 'b--', 'LineWidth', 2);
+    hold off;
+
+    xlabel('x');
+    ylabel('');
+    legend('S num','S ana');
+    title('');
+    grid off;
+
+elseif ismember(choice, [2 3])
+
+
+    S_ana_tilde = ((r_a1*s_inf*c1_tilde_num)/(r_d1+r_a1* ...
+        c1_tilde_num));
+    S_ana = S_ana_tilde*Compute_Delta(phi,D);
+    S_error = sum(abs(srf_np1-S_ana))/sum(S_ana);
+    disp("error test S = " + S_error)
+    disp("                                    ")
+    figure;
+    plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, S_ana, 'b--', 'LineWidth', 2);
+    hold off;
+
+    xlabel('x');
+    ylabel('');
+    legend('S num','S ana');
+    title('');
+    grid off;
+
+   % I draw c1_ana thanks to the relation between C1 and S at equilibrium
+    c1_ana = (r_d1/r_a1)*(S_ana_tilde/(s_inf-S_ana_tilde)).*phi;
+    c1_error = sum(abs(c1_np1-c1_ana))/sum(c1_ana);
+    disp(" error test c1  = " + c1_error)
+    disp("                                    ") 
+    figure;
+    plot(x_c, c1_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, c1_ana, 'b--', 'LineWidth', 2);
+    hold off;
+
+    xlabel('x');
+    ylabel('');
+    legend('c1 num','c1 ana');
+    title('');
+    grid off;
+
+
+    error_srf = zeros(length(time_vec)); % contains error at each time 
+
+
+    figure;
+    hold on;
+    for k = 1:length(time_vec)
+        plot(x_c, srf_sum(:, k), 'r--'); 
+        plot(x_c, srf_all_os(:,k), 'b--')
+        error_srf(k) = sum(abs(srf_sum(:,k)- ...
+            srf_all_os(:,k)))/sum(srf_sum(:,k));
+    end
+    xlabel('x'); ylabel('');
+    title('');
+    legend('C1 + C2 + S',' Srf one scalar');
+    hold off;
+
+% Then we can plot the error of srf_os as a function of iterations
+    figure;
+    semilogy(error_srf, 'r-o');
+    xlabel('Time step');
+    ylabel('');
+    title('');
+    grid on;
+
+
+
+elseif (choice == 4)
+    S_ana = srf_0.*Compute_Delta(phi,D);
+    S_error = sum(abs(srf_np1-S_ana))/sum(S_ana);
+
+    disp("error test S = " + S_error)
+    disp("                                    ")
+
+    figure;
+    plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, S_ana, 'b--', 'LineWidth', 2);
+    hold off;
+    
+    xlabel('x');
+    ylabel('');
+    legend('S num','S ana');
+    title('');
+    grid off;
+
+elseif (choice == 5) 
+
+    c1_ana = mean(c2_tilde_num)*k_rat.*phi;
+    c1_error = sum(abs(c1_np1-c1_ana))/sum(c1_ana);
+    disp(" error test c1  = " + c1_error)
+    disp("                                    ") 
+    figure;
+    plot(x_c, c1_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, c1_ana, 'b--', 'LineWidth', 2);
+    hold off;
+    
+    xlabel('x');
+    ylabel('');
+    legend('c1 num','c1 ana');
+    title('');
+    grid off;
+
+
+    c2_ana = c1_tilde_num.*(1-phi)/k_rat;
+    c2_error = sum(abs(c2_np1-c2_ana))/sum(c2_ana);
+    disp(" error test c2  = " + c2_error)
+    disp("                                    ") 
+    figure;
+    plot(x_c, c2_np1  , 'r-x', 'LineWidth', 2);
+    hold on;
+    plot(x_c, c2_ana, 'b--', 'LineWidth', 2);
+    hold off;
+    
+    xlabel('x');
+    ylabel('');
+    legend('c2 num','c2 ana');
+    title('');
+    grid off;    
 end 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%% TEST PRCQ CA MARCHE PAS PTN %%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%disp("c2 tilde num = " + c2_np1./(1-phi))
-%disp("                                    ")
-%disp("c2 tilde ana = " + c2_ana_tilde)
-
-%disp("                                    ")
-%disp("S tilde num = " + srf_np1./(6*phi.*(1-phi)))
-%disp("                                    ")
-%disp("S tilde ana = " + S_tilde_ana)
-
-%disp("                                    ")
-%disp("c1 tilde num = " + c1_np1./phi)
-%disp("                                    ")
-%disp("c1 tilde ana = " + c2_ana_tilde*k_rat)
-
-
-%disp("                                    ")
-%disp("value of sum c_init= " + (c1_t0+c2_t0+srf_0))
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -585,16 +700,6 @@ end
 
 
 if (choice == 5)
-    figure;
-    plot(x_c, c1_np1 + c2_np1 , 'r-x', 'LineWidth', 2); hold on;
-    plot(x_c, c_one_scalar_np1, 'g-o', 'LineWidth', 1, 'MarkerIndices', 1:10:length(x_c));
-    xlabel('x'); ylabel('c');
-    legend('c1 + c2','c one scalar');
-    title('Fake interface test');
-    grid on;
-    drawnow;
-    pause(0.1)
- 
 % courbe d'erreur 
     figure;
     semilogy(error_5, 'r-o');
@@ -602,15 +707,154 @@ if (choice == 5)
     ylabel('Relative error (∞-norm)');
     title('Error between c\_one\_scalar and c1 + c2');
     grid on;
-else
-    error_c1 = norm((c1_np1 - c1_ana), inf);
-    error_c2 = norm((c2_np1 - c2_ana), inf);
-    error_S = norm((srf_np1 - S_ana), inf);
 
-    disp(" Error c1 = " + error_c1)
-    disp(" Error c1 = " + error_c1)
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    figure;
+    hold on;
+    for k = 1:length(time_vec)
+        plot(x_c, c1_all(:, k), 'b--');  
+        plot(x_c, c2_all(:, k), 'r--');  
+    end
+    xlabel('x'); ylabel('');
+    title('');
+    legend('c1', 'c2');
+    hold off;
+
+    figure;
+    hold on;
+    for k = 1:length(time_vec)
+        plot(x_c, c_sum(:, k), 'r-x'); 
+        plot(x_c, c_all_os(:,k), 'b-')
+    end
+    xlabel('x'); ylabel('');
+    title('');
+    legend('C1 + KeqC2',' C one scalar');
+    hold off;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%     
 
 
 end 
 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% % construction of the function phi from data
+% xq = linspace(min(x_c), max(x_c), 1000);
+% f_phi = @(xq) interp1(x_c, phi, xq, 'linear' , 'extrap');  
+% 
+% 
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% % Verification : if the curves of f_phi and phi are stacked in the x domain
+% 
+% %figure;
+% %set(gcf, 'Color', 'w');  % Fond blanc de la figure
+% %plot(x_c, f_phi(x_c), 'r-x', 'LineWidth', 2);
+% %hold on;
+% %plot(x_c, phi, 'b-x', 'LineWidth', 2);
+% %hold o1
+% % ff;
+% 
+% %xlabel('x');
+% %ylabel('phi');
+% %legend('Phi function', 'Phi vector');
+% %title('Curves of phi function and vector');
+% %grid on;
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%  Integral of f_phi in the x domain [-1;1]   %%%%%%%%%%%%%     
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% 
+% I1 = sum(phi)*dx;
+% I2 = sum(Compute_Delta(phi,D))*dx;
+% 
+% 
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%    Calcul of c2 analytical     %%%%%%%%%%%%%     
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% if (choice ~= 4 )
+%     c2_ana_tilde = c2_analytical(r_a2,r_d2,c_total,s_inf,k_rat,I1,I2); 
+% 
+%     c2_ana = c2_ana_tilde*(1-phi); 
+% 
+%     figure;
+%     plot(x_c, c2_np1, 'r-x', 'LineWidth', 2);
+%     hold on;
+%     plot(x_c, c2_ana, 'b-o', 'LineWidth', 2);
+%     hold off;
+% 
+%     xlabel('x');
+%     ylabel('c');
+%     legend('c2','c2 ana');
+%     title('Numerical and analytical c2 results at equilibrium');
+%     grid on;
+% else 
+%     c2_ana_tilde = 0;
+% end
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%    Calcul of S analytical     %%%%%%%%%%%%%     
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% % using delta = 6phi(1-phi)
+% if ~ismember(choice, [4 5])
+%     S_tilde_ana = ((r_a2*s_inf*c2_ana_tilde)/(r_d2+r_a2*c2_ana_tilde));
+%     S_ana = S_tilde_ana*Compute_Delta(phi,D); 
+% 
+%     figure;
+%     plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
+%     hold on;
+%     plot(x_c, S_ana, 'b-o', 'LineWidth', 2);
+%     hold off;
+% 
+% 
+%     xlabel('x');
+%     ylabel('S');
+%     legend('S','S ana');
+%     title('Numerical and analytical S results at equilibrium');
+%     grid on;
+% elseif (choice == 4)
+%     S_ana = srf_0.*Compute_Delta(phi,D);
+% 
+%     figure;
+%     plot(x_c, srf_np1  , 'r-x', 'LineWidth', 2);
+%     hold on;
+%     plot(x_c, S_ana, 'b-o', 'LineWidth', 2);
+%     hold off;
+% 
+% 
+%     xlabel('x');
+%     ylabel('S');
+%     legend('S','S ana');
+%     title('Numerical and analytical S results at equilibrium');
+%     grid on;
+% end 
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%    Calcul of c1 analytical     %%%%%%%%%%%%%     
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% if ~ismember(choice, [3 4])
+%     c1_ana = c2_ana_tilde*k_rat*phi;
+% 
+%     figure;
+%     plot(x_c, c1_np1  , 'r-x', 'LineWidth', 2);
+%     hold on;
+%     plot(x_c, c1_ana, 'b-o', 'LineWidth', 2);
+%     hold off;
+% 
+%     xlabel('x');
+%     ylabel('c');
+%     legend('c1','c1 ana');
+%     title('Numerical and analytical c1 results at equilibrium');
+%     grid on;
+% end 
