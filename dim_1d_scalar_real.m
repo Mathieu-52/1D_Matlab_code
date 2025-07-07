@@ -75,7 +75,7 @@ switch choice
 
     case 2 
             k_rat = 1;
-            D1 = 1.0; D2 = 0.000001; D_s = 0.2;
+            D1 = 2.0; D2 = 0.000001; D_s = 0.2;
             c1_t0 = 2.0; c2_t0 = 0.0; srf_0 = 0.3;
             t_final = 2.;
         
@@ -92,10 +92,10 @@ switch choice
         
             r_a1 = 3; r_a2 = 0; r_d1 = 1;
             r_d2 = 0; 
-            s_inf = 1.0;
+            s_inf = 0.0;
         
     case 4 
-            k_rat = 2;
+            k_rat = 1;
             D1 = 0.0; D2 = 0.0; D_s = 0.1;
             c1_t0 = 0.0; c2_t0 = 0.0; srf_0 = 0.5;
             t_final = 0.4;
@@ -130,7 +130,6 @@ HC2=HC1/k_rat;
 
 equilibrium_reached = false; 
 
-error_5 = [];  % error for case 5 
 c1_all = [];
 c2_all = [];
 time_vec = [];
@@ -312,7 +311,7 @@ neumann=0;
                             c_sum(:,end+1) = c1_np1 + k_rat*c2_np1;
                             c_all_os(:,end+1) = c_one_scalar_np1;
                             srf_sum(:,end+1) = c1_np1 + c2_np1 + srf_np1;
-                            srf_all_os(:,end+1) = srf_os_np1;
+                            srf_all_os(:,end+1) = srf_os;
                         end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                     for rk_count=1:1:rk_order
@@ -389,11 +388,6 @@ neumann=0;
 
 
 
-
-
-% error 
-
-                    error_5(end+1) = norm((c_one_scalar - (c1 + c2)), inf);
                                
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -538,7 +532,7 @@ if (choice == 1)
     hold on;
     for k = 1:length(time_vec)
         plot(x_c, srf_sum(:, k), 'r--'); 
-        plot(x_c, srf_all_os(:,k), 'b--')
+        plot(x_c, srf_all_os(:,k), 'b--');
         error_t_srf(k) = sum(abs(srf_sum(:,k)- ...
             srf_all_os(:,k)))/sum(srf_sum(:,k));
     end
@@ -547,6 +541,7 @@ if (choice == 1)
     legend('C1 + C2 + S',' Srf one scalar');
     hold off;
 
+
 % Then we can plot the error of srf_os as a function of iterations
     figure;
     semilogy(error_t_srf, 'b-o');
@@ -554,16 +549,28 @@ if (choice == 1)
     ylabel('');
     title('');
     grid on;
-% the last vector of error_t_srf is the error at quilibrium so 
-error_x_srf =  error_t_srf(end);
-    figure;
-    plot(x_c, error_x_srf , 'r-x', 'LineWidth', 2);
 
+    
+    error_x_srf = zeros(nx_base - 1, length(time_vec));
+    figure;
+    hold on;
+    for k = 1:length(time_vec)
+        for i = 1:nx_base - 1
+            % Calcul de l'erreur relative pour chaque x et chaque t
+            error_x_srf(i, k) = abs(srf_sum(i, k) - srf_all_os(i, k)) / abs(srf_sum(i, k));
+        end
+
+        if mod(k,2)==0
+            semilogy(x_c,error_x_srf(:, k), 'k--');
+        end 
+    end
     xlabel('x');
     ylabel('');
-    legend('error srf os');
+    legend('Error one-scalar model');
     title('');
     grid off;
+    hold off;
+
 
 
 elseif ismember(choice, [2 3])
@@ -612,7 +619,7 @@ elseif ismember(choice, [2 3])
     hold on;
     for k = 1:length(time_vec)
         plot(x_c, srf_sum(:, k), 'r--'); 
-        plot(x_c, srf_all_os(:,k), 'b--')
+        plot(x_c, srf_all_os(:,k), 'b--');
         error_t_srf(k) = sum(abs(srf_sum(:,k)- ...
             srf_all_os(:,k)))/sum(srf_sum(:,k));
     end
@@ -621,6 +628,7 @@ elseif ismember(choice, [2 3])
     legend('C1 + C2 + S',' Srf one scalar');
     hold off;
 
+
 % Then we can plot the error of srf_os as a function of iterations
     figure;
     semilogy(error_t_srf, 'r-o');
@@ -628,16 +636,29 @@ elseif ismember(choice, [2 3])
     ylabel('');
     title('');
     grid on;
-% the last vector of error_t_srf is the error at quilibrium so 
-    error_x_srf =  error_t_srf(end);
-    figure;
-    plot(x_c, error_x_srf , 'r-x', 'LineWidth', 2);
 
+
+    error_x_srf = zeros(nx_base - 1, length(time_vec));
+    figure;
+    hold on;
+    for k = 1:length(time_vec)
+        for i = 1:nx_base - 1
+            % Calcul de l'erreur relative pour chaque x et chaque t
+            error_x_srf(i, k) = abs(srf_sum(i, k) - srf_all_os(i, k)) / abs(srf_sum(i, k));
+        end
+
+        if mod(k,2)==0
+            semilogy(x_c,error_x_srf(:, k), 'k--');
+        end 
+    end
     xlabel('x');
     ylabel('');
-    legend('error srf os');
+    legend('Error one-scalar model');
     title('');
     grid off;
+    hold off;
+
+
 
 
 elseif (choice == 4)
@@ -694,14 +715,6 @@ elseif (choice == 5)
     title('');
     grid off;    
 
-% courbe d'erreur 
-    figure;
-    semilogy(error_5, 'r-o');
-    xlabel('Time step');
-    ylabel('Relative error (∞-norm)');
-    title('Error between c\_one\_scalar and c1 + c2');
-    grid on;
-
 
     figure;
     hold on;
@@ -724,6 +737,37 @@ elseif (choice == 5)
     title('');
     legend('C1 + KeqC2',' C one scalar');
     hold off;
+
+
+% ERROR     
+    error_t_c = zeros(length(time_vec)); % contains error at each time 
+    error_x_c = zeros(nx_base - 1, length(time_vec));
+    figure;
+    hold on;
+    for k = 1:length(time_vec)
+        error_t_c(k) = sum(abs(c_sum(:,k)- ...
+            c_all_os(:,k)))/sum(srf_sum(:,k));
+        for i = 1:nx_base - 1
+            error_x_c(i, k) = abs(c_sum(i, k) - c_all_os(i, k)) / abs(c_sum(i, k));
+        end
+
+        if mod(k,2)==0
+            semilogy(x_c,error_x_c(:, k), 'k--');
+        end 
+    end
+    xlabel('x');
+    ylabel('');
+    legend('Error one-scalar model');
+    title('');
+    grid off;
+    hold off;
+
+    figure;
+    semilogy(error_t_c, 'r-o');
+    xlabel('Time step');
+    ylabel('');
+    title('');
+    grid on;
 
 end 
 
