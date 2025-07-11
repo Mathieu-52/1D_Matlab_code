@@ -73,7 +73,7 @@ switch choice
             k_rat = 1;
             D1 = 1.0; D2 = 0.000001; D_s = 0.2;
             c1_t0 = 2.0; c2_t0 = 0.0; srf_0 = 0.3;
-            t_final = 3.;
+            t_final = 2.;
         
             r_a1 = 3; r_a2 = 0.1; r_d1 = 1;
             r_d2 = (r_d1 * r_a2) / (k_rat * r_a1);  
@@ -84,7 +84,7 @@ switch choice
             k_rat = 1;
             D1 = 0.5; D2 = 0.0; D_s = 0.5;
             c1_t0 = 2.0; c2_t0 = 0.0; srf_0 = 1.5;
-            t_final = 3;
+            t_final = 2;
         
             r_a1 = 3; r_a2 = 0; r_d1 = 2;
             r_d2 = 0; 
@@ -238,12 +238,14 @@ neumann=0;
     
                 srf_init=srf_0.*Compute_Delta(phi,D);
                 srf=srf_init;
+                srf_os=srf_init+c1_init+c2_init;
                 if  ismember(choice, [2 3])  
-                    srf_os_0=srf_init+c1_init+c2_init; 
-                    srf_os_1=srf_init+c1_init+c2_init; 
+                    srf_all_os_0(:,end+1) = srf_os;   
+                    srf_all_os_1(:,end+1) = srf_os;
                 else 
-                    srf_os=srf_init+c1_init+c2_init; 
+                    srf_all_os(:,end+1) = srf_os;
                 end    
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
                 c1_all(:,end+1) = c1_init;
                 c2_all(:,end+1) = c2_init;
@@ -254,8 +256,8 @@ neumann=0;
                 srf_sum(:,end+1) = c1_init + c2_init + srf_init;
 
                 if  ismember(choice, [2 3])  
-                    srf_all_os_0(:,end+1) = srf_os_0;   
-                    srf_all_os_1(:,end+1) = srf_os_1;
+                    srf_all_os_0(:,end+1) = srf_os;   
+                    srf_all_os_1(:,end+1) = srf_os;
                 else 
                     srf_all_os(:,end+1) = srf_os;
                 end                
@@ -323,14 +325,8 @@ neumann=0;
                      c_one_scalar_int=c_one_scalar;
                      c_one_scalar_i_int=c_one_scalar_i;
                      srf_int=srf;
-                     if ismember (choice, [2,3])   
-                         srf_os_int_0 = srf_os_0;
-                         srf_os_int_1 = srf_os_1;
-                     else 
-                         srf_os_int=srf_os;
-                     end                     
-
-
+                     srf_os_int=srf_os;
+                     
                      phi_np1=phi;
                      c1_np1=c1;
                      c2_np1=c2;
@@ -338,8 +334,8 @@ neumann=0;
                      c_one_scalar_i_np1=c_one_scalar_i;
                      srf_np1=srf;
                      if ismember (choice, [2,3])   
-                         srf_os_np1_0 = srf_os_0;
-                         srf_os_np1_1 = srf_os_1;
+                         srf_os_np1_0 = srf_os;
+                         srf_os_np1_1 = srf_os;
                      else 
                          srf_os_np1=srf_os;
                      end 
@@ -368,9 +364,9 @@ neumann=0;
                         d_c_one_scalar_i=inc_c_one_scalar_rk_step( c_one_scalar_i_int, phi_int, S, nx, u, dt, dx, D1, D2, my_eps, k_rat, dirichlet, neumann, my_pf, D);
                         d_srf=srf_rk_step(srf_int, phi_int, S, c1_int, c2_int, nx, u, dt, dx, gam, my_eps, dirichlet, neumann, my_pf, D, D_s, r_a1, r_a2, r_d1, r_d2, s_inf);
                         if ismember(choice, [2 3])  
-                            d_srf_os_0=srf_one_scalar_rk_step_0(srf_os_int_0, phi_int, S, nx, u, dt, dx, D1, D2, my_eps, k_rat, dirichlet, neumann, my_pf, D, D_s, r_a1, r_a2, r_d1, r_d2, s_inf);
+                            d_srf_os_0=srf_one_scalar_rk_step_0(srf_os_int, phi_int, S, nx, u, dt, dx, D1, D2, my_eps, k_rat, dirichlet, neumann, my_pf, D, D_s, r_a1, r_a2, r_d1, r_d2, s_inf);
                             
-                            d_srf_os_1=srf_one_scalar_rk_step_1(srf_os_int_1, phi_int, S, nx, u, dt, dx, D1, D2, my_eps, k_rat, dirichlet, neumann, my_pf, D, D_s, r_a1, r_a2, r_d1, r_d2, s_inf);
+                            d_srf_os_1=srf_one_scalar_rk_step_1(srf_os_int, phi_int, S, nx, u, dt, dx, D1, D2, my_eps, k_rat, dirichlet, neumann, my_pf, D, D_s, r_a1, r_a2, r_d1, r_d2, s_inf);
                         else 
                             d_srf_os=srf_one_scalar_rk_step(srf_os_int, phi_int, S, nx, u, dt, dx, D1, D2, my_eps, k_rat, dirichlet, neumann, my_pf, D, D_s, r_a1, r_a2, r_d1, r_d2, s_inf);
                        
@@ -383,8 +379,8 @@ neumann=0;
                         c_one_scalar_i_int= c_one_scalar_i + pre_coeff(rk_count)*d_c_one_scalar_i;
                         srf_int= srf + pre_coeff(rk_count)*d_srf;
                         if ismember(choice,[2,3])
-                            srf_os_int_0 =srf_os_0 + pre_coeff(rk_count)*d_srf_os_0;
-                            srf_os_int_1 =srf_os_1 + pre_coeff(rk_count)*d_srf_os_1;
+                            srf_os_int_0 =srf_os + pre_coeff(rk_count)*d_srf_os_0;
+                            srf_os_int_1 =srf_os + pre_coeff(rk_count)*d_srf_os_1;
                         else 
                             srf_os_int=srf_os + pre_coeff(rk_count)*d_srf_os;
                         end 
@@ -469,24 +465,24 @@ neumann=0;
         
                     % plotting evolution of data
               
-                    % if((mod(counter,my_plot.plotting_frequency)==1)||(is_final_time))
-                    %     my_plotter(x_c,phi,c1,c2,c_one_scalar,c_one_scalar_i,srf,srf_os,T,T_i,T_1,T_2,my_plot);
-                    %     pause(0.1)
-                    %     hold on
-                    %     %plot(x_c,1*(c1_t0*phi-c1),'-.k','linewidth',2);
-                    %     hold off
-                    %     %               saveas(gcf,sprintf('image_vor_%d',counter),'fig')
-                    %     %               set(gcf,'PaperUnits','inches','PaperPosition',[0 0 16 12]);
-                    %     %     print(gcf,'-depsc','-r100',sprintf('image_%d',counter));
-                    % 
-                    %     xlabel('$x$','interpreter','latex','fontsize',my_plot.font_size);
-                    %     set(gca,'Fontsize',my_plot.font_size)
-                    %     pause(0.01)
-                    %     hold off
-                    %     time_percent=100*time/t_final;
-                    %     total=sum(c1+c2+srf);
-                    %     total_os=sum(srf_os);
-                    % end
+                    if((mod(counter,my_plot.plotting_frequency)==1)||(is_final_time))
+                        my_plotter(x_c,phi,c1,c2,c_one_scalar,c_one_scalar_i,srf,srf_os,T,T_i,T_1,T_2,my_plot);
+                        pause(0.1)
+                        hold on
+                        %plot(x_c,1*(c1_t0*phi-c1),'-.k','linewidth',2);
+                        hold off
+                        %               saveas(gcf,sprintf('image_vor_%d',counter),'fig')
+                        %               set(gcf,'PaperUnits','inches','PaperPosition',[0 0 16 12]);
+                        %     print(gcf,'-depsc','-r100',sprintf('image_%d',counter));
+                        
+                        xlabel('$x$','interpreter','latex','fontsize',my_plot.font_size);
+                        set(gca,'Fontsize',my_plot.font_size)
+                        pause(0.01)
+                        hold off
+                        time_percent=100*time/t_final;
+                        total=sum(c1+c2+srf);
+                        total_os=sum(srf_os);
+                    end
                     counter=counter+1;
 
 
@@ -721,11 +717,11 @@ elseif ismember(choice, [2 3])
 
     figure;
     hold on;
-    %for k = 1:length(time_vec)
-        plot(x_c, srf_sum(:, end), 'r--o'); 
+    % for k = 1:length(time_vec)
+        plot(x_c, srf_sum(:, end), 'r-'); 
         plot(x_c, srf_all_os_0(:,end), 'b-x');
-        plot(x_c, srf_all_os_1(:,end), 'g-x');
-    %end
+        plot(x_c, srf_all_os_1(:,end), 'g-');
+    % end
     xlabel('x'); ylabel('');
     title('');
     legend('3-scalars model',' 1-confined-scalar model', '1-naive-scalar model' ...
@@ -735,8 +731,8 @@ elseif ismember(choice, [2 3])
 
     figure;
     hold on; 
-    semilogy(time_vec,error_t_srf_0, 'r-x');
-    semilogy(time_vec,error_t_srf_1, 'b-o');
+    plot(time_vec,log(error_t_srf_0), 'r-x');
+    plot(time_vec,log(error_t_srf_1), 'b-o');
     hold off;
     xlabel('Time (s)');
     ylabel('');
@@ -744,38 +740,38 @@ elseif ismember(choice, [2 3])
     legend('naive','confined');
     grid on;
 
-    error_x_srf = zeros(nx_base - 1, length(time_vec));
-    for k = 1:length(time_vec)
-        for i = 1:nx_base - 1
-            error_x_srf(i, k) = abs(srf_sum(i, k) - srf_all_os_1(i, k)) / abs(srf_sum(i, k));
-        end
-    end
-
-   % at each time 
-    figure;
-    hold on;
-    semilogy(x_c, error_x_srf(:, 1),  'g--'); % t = 0
-    semilogy(x_c, error_x_srf(:, 2), 'r--'); 
-    semilogy(x_c, error_x_srf(:, 5), 'm--');
-    semilogy(x_c, error_x_srf(:, 21), 'k--');
-    semilogy(x_c, error_x_srf(:, end), 'b--'); 
-    xlabel('x');
-    ylabel('');
-    legend('t = 0 s', 't = 0.06 s' , 't = 0.24 s','t = 1.22 s' ,'Final time = 3 s');
-    title('');
-    grid off;
-    hold off;
-
-   % at equilibrium 
-    figure;
-    hold on;
-    semilogy(x_c, error_x_srf(:, end), 'b--'); 
-    xlabel('x');
-    ylabel('');
-    legend('Final time = 3 s ');
-    title('');
-    grid off;
-    hold off;
+   %  error_x_srf = zeros(nx_base - 1, length(time_vec));
+   %  for k = 1:length(time_vec)
+   %      for i = 1:nx_base - 1
+   %          error_x_srf(i, k) = abs(srf_sum(i, k) - srf_all_os(i, k)) / abs(srf_sum(i, k));
+   %      end
+   %  end
+   % 
+   % % at each time 
+   %  figure;
+   %  hold on;
+   %  semilogy(x_c, error_x_srf(:, 1),  'g--'); % t = 0
+   %  semilogy(x_c, error_x_srf(:, 2), 'r--'); 
+   %  semilogy(x_c, error_x_srf(:, 5), 'm--');
+   %  semilogy(x_c, error_x_srf(:, 21), 'k--');
+   %  semilogy(x_c, error_x_srf(:, end), 'b--'); 
+   %  xlabel('x');
+   %  ylabel('');
+   %  legend('t = 0 s', 't = 0.06 s' , 't = 0.24 s','t = 1.22 s' ,'Final time = 3 s');
+   %  title('');
+   %  grid off;
+   %  hold off;
+   % 
+   % % at equilibrium 
+   %  figure;
+   %  hold on;
+   %  semilogy(x_c, error_x_srf(:, end), 'b--'); 
+   %  xlabel('x');
+   %  ylabel('');
+   %  legend('Final time = 3 s ');
+   %  title('');
+   %  grid off;
+   %  hold off;
 
 
 
